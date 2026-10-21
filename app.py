@@ -43,19 +43,17 @@ except Exception as e:
     st.stop()
 
 
-st.title("📊 AI-Based Employee Attrition Prediction")
-st.write(
-    "Employee Attrition Prediction and HR Analytics System"
-)
+st.title("AI-Based Employee Attrition Prediction")
+st.write("Employee Attrition Prediction and HR Analytics System")
 
 dashboard_tab, prediction_tab, about_tab = st.tabs(
     ["HR Dashboard", "Predict Attrition", "About Project"]
 )
 
 
-# =====================================
+# ==========================================
 # HR DASHBOARD
-# =====================================
+# ==========================================
 
 with dashboard_tab:
     st.header("HR Analytics Dashboard")
@@ -66,9 +64,10 @@ with dashboard_tab:
         total_employees = len(df)
         employees_left = (df["Attrition"] == "Yes").sum()
         employees_stayed = (df["Attrition"] == "No").sum()
+
         attrition_rate = (
             employees_left / total_employees * 100
-            if total_employees else 0
+            if total_employees > 0 else 0
         )
 
         col1, col2, col3, col4 = st.columns(4)
@@ -85,6 +84,7 @@ with dashboard_tab:
             .value_counts()
             .reindex(["No", "Yes"], fill_value=0)
         )
+
         st.bar_chart(attrition_count)
 
         st.subheader("Overtime vs Attrition")
@@ -93,6 +93,7 @@ with dashboard_tab:
             df["OverTime"],
             df["Attrition"]
         )
+
         st.bar_chart(overtime)
 
         st.subheader("Department-wise Attrition Analysis")
@@ -129,11 +130,47 @@ with dashboard_tab:
             df["JobSatisfaction"],
             df["Attrition"]
         )
+
         st.bar_chart(satisfaction)
 
+        # FEATURE IMPORTANCE ANALYSIS
+
+        st.subheader("Feature Importance Analysis")
+
+        importance_df = pd.DataFrame({
+            "Feature": features,
+            "Importance": model.feature_importances_
+        })
+
+        importance_df = importance_df.sort_values(
+            by="Importance",
+            ascending=False
+        ).head(10)
+
+        st.write(
+            "Top 10 factors used by the model "
+            "for employee attrition prediction."
+        )
+
+        st.bar_chart(
+            importance_df.set_index("Feature")["Importance"]
+        )
+
+        with st.expander("View Feature Importance Values"):
+            st.dataframe(
+                importance_df,
+                use_container_width=True
+            )
+
         st.caption(
-            "Dashboard charts use the IBM HR Analytics sample dataset. "
-            "This is sample data, not your company's live employee data."
+            "Feature importance indicates how the model uses "
+            "features. It does not prove that a feature causes "
+            "employee attrition."
+        )
+
+        st.caption(
+            "Dashboard charts use the IBM HR Analytics sample "
+            "dataset, not your company's live employee data."
         )
 
     except Exception as e:
@@ -144,9 +181,9 @@ with dashboard_tab:
         st.caption(str(e))
 
 
-# =====================================
+# ==========================================
 # PREDICT EMPLOYEE ATTRITION
-# =====================================
+# ==========================================
 
 with prediction_tab:
     st.header("Predict Employee Attrition Risk")
@@ -180,6 +217,7 @@ with prediction_tab:
 
     with st.form("employee_form"):
         values = {}
+
         col1, col2 = st.columns(2)
 
         for i, feature in enumerate(features):
@@ -239,6 +277,8 @@ with prediction_tab:
                 f"{probability * 100:.1f}%"
             )
 
+            st.progress(float(probability))
+
             if probability >= 0.30:
                 st.warning("Higher predicted attrition risk")
             else:
@@ -253,9 +293,9 @@ with prediction_tab:
             st.error(f"Prediction error: {e}")
 
 
-# =====================================
+# ==========================================
 # ABOUT PROJECT
-# =====================================
+# ==========================================
 
 with about_tab:
     st.header("About This Project")
@@ -275,8 +315,15 @@ with about_tab:
     - Streamlit
     - IBM HR Analytics Sample Dataset
 
-    **Project Objective**
-
-    To analyze employee data, identify attrition patterns,
-    and estimate employee attrition risk using machine learning.
+    **Project Objectives**
+    - Analyze employee attrition patterns.
+    - Compare attrition across departments.
+    - Examine overtime and job satisfaction.
+    - Display model feature importance.
+    - Estimate employee attrition risk using machine learning.
     """)
+
+    st.info(
+        "This is an academic demonstration using sample data. "
+        "Predictions should not be treated as certain outcomes."
+    )
