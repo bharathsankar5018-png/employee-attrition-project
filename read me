@@ -12,6 +12,9 @@ This project uses Machine Learning to predict employee attrition risk and provid
 - Machine Learning
 
 ## Key Features
+## Application Screenshot
+
+![HR Dashboard](hr-dashboard.png)
 - HR analytics dashboard
 - Employee attrition risk prediction
 - Model evaluation metrics
