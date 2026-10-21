@@ -1,7 +1,8 @@
 
+import os
+import pickle
 import streamlit as st
 import pandas as pd
-import pickle
 
 st.set_page_config(
     page_title="Employee Attrition Prediction",
@@ -15,11 +16,23 @@ DATA_URL = (
     "master/WA_Fn-UseC_-HR-Employee-Attrition.csv"
 )
 
-MODEL_PATH = "employee_attrition_project.pkl"
+# Find the model file in the same folder as app.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(
+    BASE_DIR,
+    "employee_attrition_project.pkl"
+)
 
 
 @st.cache_resource
 def load_model():
+    if not os.path.isfile(MODEL_PATH):
+        raise FileNotFoundError(
+            "employee_attrition_project.pkl was not found "
+            "in the same folder as app.py. Check the GitHub "
+            "repository and file name."
+        )
+
     with open(MODEL_PATH, "rb") as file:
         saved_data = pickle.load(file)
 
@@ -139,32 +152,34 @@ with dashboard_tab:
 
         st.subheader("Feature Importance Analysis")
 
-        importance_df = pd.DataFrame({
-            "Feature": features,
-            "Importance": model.feature_importances_
-        })
+        if hasattr(model, "feature_importances_"):
+            importance_df = pd.DataFrame({
+                "Feature": features,
+                "Importance": model.feature_importances_
+            })
 
-        importance_df = importance_df.sort_values(
-            by="Importance",
-            ascending=False
-        ).head(10)
+            importance_df = importance_df.sort_values(
+                by="Importance",
+                ascending=False
+            ).head(10)
 
-        st.write("Top 10 features used by the prediction model.")
-
-        st.bar_chart(
-            importance_df.set_index("Feature")["Importance"]
-        )
-
-        with st.expander("View Feature Importance Values"):
-            st.dataframe(
-                importance_df,
-                use_container_width=True
+            st.write(
+                "Top 10 features used by the prediction model."
             )
 
-        st.caption(
-            "Feature importance describes how the model uses "
-            "features. It does not prove cause and effect."
-        )
+            st.bar_chart(
+                importance_df.set_index("Feature")["Importance"]
+            )
+
+            with st.expander("View Feature Importance Values"):
+                st.dataframe(
+                    importance_df,
+                    use_container_width=True
+                )
+
+            st.caption(
+                "Feature importance does not prove cause and effect."
+            )
 
         st.caption(
             "Dashboard uses the IBM HR Analytics sample dataset, "
@@ -266,9 +281,12 @@ with prediction_tab:
                 columns=features
             )
 
-            probability = float(
-                model.predict_proba(input_df)[0][1]
-            )
+            probabilities = model.predict_proba(input_df)[0]
+
+            # Find the probability corresponding to Attrition = Yes
+            classes = list(model.classes_)
+            yes_index = classes.index(1) if 1 in classes else classes.index("Yes")
+            probability = float(probabilities[yes_index])
 
             st.subheader("Prediction Result")
 
@@ -287,14 +305,12 @@ with prediction_tab:
                     "The model estimates a higher attrition risk "
                     "for this employee."
                 )
-
             elif probability >= 0.30:
                 st.warning("MEDIUM RISK")
                 st.write(
                     "The model estimates a moderate attrition risk "
                     "for this employee."
                 )
-
             else:
                 st.success("LOW RISK")
                 st.write(
@@ -303,9 +319,8 @@ with prediction_tab:
                 )
 
             st.caption(
-                "Risk categories use demonstration thresholds: "
-                "Low below 30%, Medium from 30% to below 60%, "
-                "and High at 60% or above."
+                "Demonstration thresholds: Low below 30%, Medium "
+                "from 30% to below 60%, and High at 60% or above."
             )
 
             st.info(
@@ -320,49 +335,39 @@ with prediction_tab:
 
 
 # ==========================================
-# MODEL EVALUATION DASHBOARD
+# MODEL EVALUATION
 # ==========================================
 
 with evaluation_tab:
     st.header("Model Evaluation Dashboard")
 
-    st.write(
-        "Performance metrics calculated using the held-out "
-        "test dataset."
-    )
-
     if evaluation is None:
         st.warning(
             "Evaluation metrics were not found in the model file. "
-            "Please upload the updated employee_attrition_project.pkl "
-            "file containing the evaluation results."
+            "Upload the updated employee_attrition_project.pkl "
+            "containing the saved evaluation results."
         )
-
     else:
-        metric1, metric2, metric3, metric4 = st.columns(4)
+        col1, col2, col3, col4 = st.columns(4)
 
-        metric1.metric(
+        col1.metric(
             "Accuracy",
             f"{evaluation['accuracy'] * 100:.2f}%"
         )
-
-        metric2.metric(
+        col2.metric(
             "Precision",
             f"{evaluation['precision'] * 100:.2f}%"
         )
-
-        metric3.metric(
+        col3.metric(
             "Recall",
             f"{evaluation['recall'] * 100:.2f}%"
         )
-
-        metric4.metric(
+        col4.metric(
             "F1 Score",
             f"{evaluation['f1_score'] * 100:.2f}%"
         )
 
         st.divider()
-
         st.subheader("Confusion Matrix")
 
         cm = evaluation.get("confusion_matrix")
@@ -383,31 +388,28 @@ with evaluation_tab:
             )
 
             st.caption(
-                "Rows represent actual outcomes; columns represent "
-                "predicted outcomes. Correct predictions appear on "
-                "the main diagonal."
+                "Rows are actual outcomes; columns are predicted "
+                "outcomes. The diagonal cells are correct predictions."
             )
-
-        st.subheader("Understanding the Metrics")
-
-        st.markdown("""
-        - **Accuracy:** Overall proportion of correct predictions.
-        - **Precision:** Among employees predicted to leave, how many actually left.
-        - **Recall:** Among employees who actually left, how many the model identified.
-        - **F1 Score:** Balance between precision and recall.
-        """)
 
         if "threshold" in evaluation:
             st.info(
-                f"Evaluation prediction threshold: "
+                f"Evaluation probability threshold: "
                 f"{evaluation['threshold']:.2f}"
             )
 
+        st.subheader("Metric Definitions")
+        st.markdown("""
+        - **Accuracy:** Overall proportion of correct predictions.
+        - **Precision:** Among employees predicted to leave, how many actually left.
+        - **Recall:** Among employees who actually left, how many were identified.
+        - **F1 Score:** Combined measure of precision and recall.
+        """)
+
         st.caption(
-            "These metrics describe performance on the saved test "
-            "set. Results may differ on new employee data. "
-            "Model evaluation alone does not validate the system "
-            "for real employment decisions."
+            "These metrics describe the saved test-set results. "
+            "Performance may differ on new data. This academic "
+            "evaluation does not validate the model for real HR decisions."
         )
 
 
@@ -439,9 +441,8 @@ with about_tab:
     - Examine overtime and job satisfaction.
     - Display feature importance.
     - Estimate employee attrition risk.
-    - Evaluate model performance using Accuracy, Precision,
-      Recall, F1 Score, and Confusion Matrix.
-    - Categorize estimated risk as Low, Medium, or High.
+    - Evaluate the model using Accuracy, Precision, Recall,
+      F1 Score, and Confusion Matrix.
     """)
 
     st.info(
