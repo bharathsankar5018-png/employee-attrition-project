@@ -1,0 +1,37 @@
+# AI-Based Employee Attrition Prediction and HR Analytics System
+
+## Project Overview
+This project uses Machine Learning to predict employee attrition risk and provide HR analytics through an interactive Streamlit web application.
+
+## Technologies Used
+- Python
+- Pandas
+- Scikit-learn
+- Random Forest Classifier
+- Streamlit
+- Machine Learning
+
+## Key Features
+- HR analytics dashboard
+- Employee attrition risk prediction
+- Model evaluation metrics
+- Department-wise attrition analysis
+- Overtime and attrition analysis
+- Feature importance visualization
+
+## Model Evaluation
+- Accuracy: 81.97%
+- Precision: 44.44%
+- Recall: 51.06%
+- F1 Score: 47.52%
+
+*Evaluation results are based on the current test dataset and selected prediction threshold. Model estimates are not certainties.*
+
+## Live Demo
+Add your Streamlit application link here.
+
+## GitHub Repository
+https://github.com/bharathsankar5018-png/employee-attrition-project
+
+## Disclaimer
+This project is for educational and demonstration purposes. Predictions should not be used as the sole basis for employment decisions.
