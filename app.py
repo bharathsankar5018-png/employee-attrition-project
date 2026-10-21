@@ -44,7 +44,9 @@ except Exception as e:
 
 
 st.title("AI-Based Employee Attrition Prediction")
-st.write("Employee Attrition Prediction and HR Analytics System")
+st.write(
+    "Employee Attrition Prediction and HR Analytics System"
+)
 
 dashboard_tab, prediction_tab, about_tab = st.tabs(
     ["HR Dashboard", "Predict Attrition", "About Project"]
@@ -84,7 +86,6 @@ with dashboard_tab:
             .value_counts()
             .reindex(["No", "Yes"], fill_value=0)
         )
-
         st.bar_chart(attrition_count)
 
         st.subheader("Overtime vs Attrition")
@@ -93,7 +94,6 @@ with dashboard_tab:
             df["OverTime"],
             df["Attrition"]
         )
-
         st.bar_chart(overtime)
 
         st.subheader("Department-wise Attrition Analysis")
@@ -121,7 +121,6 @@ with dashboard_tab:
             .mul(100)
             .round(2)
         )
-
         st.bar_chart(department_rate)
 
         st.subheader("Job Satisfaction vs Attrition")
@@ -130,10 +129,7 @@ with dashboard_tab:
             df["JobSatisfaction"],
             df["Attrition"]
         )
-
         st.bar_chart(satisfaction)
-
-        # FEATURE IMPORTANCE ANALYSIS
 
         st.subheader("Feature Importance Analysis")
 
@@ -147,10 +143,7 @@ with dashboard_tab:
             ascending=False
         ).head(10)
 
-        st.write(
-            "Top 10 factors used by the model "
-            "for employee attrition prediction."
-        )
+        st.write("Top 10 features used by the prediction model.")
 
         st.bar_chart(
             importance_df.set_index("Feature")["Importance"]
@@ -163,14 +156,13 @@ with dashboard_tab:
             )
 
         st.caption(
-            "Feature importance indicates how the model uses "
-            "features. It does not prove that a feature causes "
-            "employee attrition."
+            "Feature importance describes how the model uses "
+            "features. It does not prove cause and effect."
         )
 
         st.caption(
-            "Dashboard charts use the IBM HR Analytics sample "
-            "dataset, not your company's live employee data."
+            "Dashboard uses the IBM HR Analytics sample dataset, "
+            "not your company's live employee data."
         )
 
     except Exception as e:
@@ -268,7 +260,9 @@ with prediction_tab:
                 columns=features
             )
 
-            probability = model.predict_proba(input_df)[0][1]
+            probability = float(
+                model.predict_proba(input_df)[0][1]
+            )
 
             st.subheader("Prediction Result")
 
@@ -277,16 +271,43 @@ with prediction_tab:
                 f"{probability * 100:.1f}%"
             )
 
-            st.progress(float(probability))
+            st.progress(
+                min(max(probability, 0.0), 1.0)
+            )
 
-            if probability >= 0.30:
-                st.warning("Higher predicted attrition risk")
+            # Risk categories for demonstration
+            if probability >= 0.60:
+                st.error("HIGH RISK")
+                st.write(
+                    "The model estimates a higher attrition risk "
+                    "for this employee."
+                )
+
+            elif probability >= 0.30:
+                st.warning("MEDIUM RISK")
+                st.write(
+                    "The model estimates a moderate attrition risk "
+                    "for this employee."
+                )
+
             else:
-                st.success("Lower predicted attrition risk")
+                st.success("LOW RISK")
+                st.write(
+                    "The model estimates a lower attrition risk "
+                    "for this employee."
+                )
 
             st.caption(
+                "Risk categories use demonstration thresholds: "
+                "Low below 30%, Medium from 30% to below 60%, "
+                "and High at 60% or above."
+            )
+
+            st.info(
                 "This is a model estimate, not a certainty. "
-                "Do not use it alone for employment decisions."
+                "These thresholds are illustrative and have not "
+                "been validated for real HR decisions. "
+                "Do not use this result alone to make employment decisions."
             )
 
         except Exception as e:
@@ -319,11 +340,12 @@ with about_tab:
     - Analyze employee attrition patterns.
     - Compare attrition across departments.
     - Examine overtime and job satisfaction.
-    - Display model feature importance.
-    - Estimate employee attrition risk using machine learning.
+    - Display feature importance.
+    - Estimate employee attrition risk.
+    - Categorize estimated risk as Low, Medium, or High.
     """)
 
     st.info(
-        "This is an academic demonstration using sample data. "
-        "Predictions should not be treated as certain outcomes."
+        "This academic project uses sample data. "
+        "Predictions are estimates and are not guaranteed outcomes."
     )
