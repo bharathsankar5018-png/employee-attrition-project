@@ -1,10 +1,10 @@
 
-import pickle
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import pickle
 
 st.set_page_config(
-    page_title="Employee HR Analytics",
+    page_title="Employee Attrition Prediction",
     page_icon="📊",
     layout="wide"
 )
@@ -15,30 +15,47 @@ DATA_URL = (
     "master/WA_Fn-UseC_-HR-Employee-Attrition.csv"
 )
 
+MODEL_PATH = "employee_attrition_project.pkl"
+
+
 @st.cache_resource
 def load_model():
-    with open("employee_attrition_project.pkl", "rb") as f:
-        return pickle.load(f)
+    with open(MODEL_PATH, "rb") as file:
+        saved_data = pickle.load(file)
+
+    return (
+        saved_data["model"],
+        saved_data["encoders"],
+        saved_data["features"]
+    )
+
 
 @st.cache_data
 def load_dataset():
     return pd.read_csv(DATA_URL)
 
-st.title("📊 Employee Attrition Prediction & HR Analytics")
-st.caption("Machine Learning | Random Forest | HR Analytics")
 
 try:
-    project = load_model()
-    model = project["model"]
-    encoders = project["encoders"]
-    features = project["features"]
+    model, encoders, features = load_model()
 except Exception as e:
-    st.error(f"Unable to load model: {e}")
+    st.error("Model file could not be loaded.")
+    st.code(str(e))
     st.stop()
 
-dashboard_tab, prediction_tab, about_tab = st.tabs(
-    ["📈 HR Dashboard", "🔮 Predict Attrition", "ℹ️ About Project"]
+
+st.title("📊 AI-Based Employee Attrition Prediction")
+st.write(
+    "Employee Attrition Prediction and HR Analytics System"
 )
+
+dashboard_tab, prediction_tab, about_tab = st.tabs(
+    ["HR Dashboard", "Predict Attrition", "About Project"]
+)
+
+
+# =====================================
+# HR DASHBOARD
+# =====================================
 
 with dashboard_tab:
     st.header("HR Analytics Dashboard")
@@ -46,32 +63,38 @@ with dashboard_tab:
     try:
         df = load_dataset()
 
-        total = len(df)
-        left_count = (df["Attrition"] == "Yes").sum()
-        stayed_count = (df["Attrition"] == "No").sum()
-        attrition_rate = left_count / total * 100
+        total_employees = len(df)
+        employees_left = (df["Attrition"] == "Yes").sum()
+        employees_stayed = (df["Attrition"] == "No").sum()
+        attrition_rate = (
+            employees_left / total_employees * 100
+            if total_employees else 0
+        )
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total Employees", f"{total:,}")
-        c2.metric("Employees Left", f"{left_count:,}")
-        c3.metric("Employees Stayed", f"{stayed_count:,}")
-        c4.metric("Attrition Rate", f"{attrition_rate:.1f}%")
+        col1, col2, col3, col4 = st.columns(4)
 
-        st.divider()
+        col1.metric("Total Employees", total_employees)
+        col2.metric("Employees Left", int(employees_left))
+        col3.metric("Employees Stayed", int(employees_stayed))
+        col4.metric("Attrition Rate", f"{attrition_rate:.1f}%")
 
-        left, right = st.columns(2)
+        st.subheader("Employee Attrition Overview")
 
-        with left:
-            st.subheader("Employee Attrition")
-            attrition_counts = (
-                df["Attrition"].value_counts()
-                .reindex(["No", "Yes"], fill_value=0)
-            )
-            st.bar_chart(attrition_counts)
+        attrition_count = (
+            df["Attrition"]
+            .value_counts()
+            .reindex(["No", "Yes"], fill_value=0)
+        )
+        st.bar_chart(attrition_count)
 
-        with right:
-            st.subheader("Overtime vs Attrition")
-            
+        st.subheader("Overtime vs Attrition")
+
+        overtime = pd.crosstab(
+            df["OverTime"],
+            df["Attrition"]
+        )
+        st.bar_chart(overtime)
+
         st.subheader("Department-wise Attrition Analysis")
 
         department_data = pd.crosstab(
@@ -100,14 +123,11 @@ with dashboard_tab:
 
         st.bar_chart(department_rate)
 
-            overtime = pd.crosstab(
-                df["OverTime"], df["Attrition"]
-            )
-            st.bar_chart(overtime)
-
         st.subheader("Job Satisfaction vs Attrition")
+
         satisfaction = pd.crosstab(
-            df["JobSatisfaction"], df["Attrition"]
+            df["JobSatisfaction"],
+            df["Attrition"]
         )
         st.bar_chart(satisfaction)
 
@@ -123,36 +143,59 @@ with dashboard_tab:
         )
         st.caption(str(e))
 
+
+# =====================================
+# PREDICT EMPLOYEE ATTRITION
+# =====================================
+
 with prediction_tab:
     st.header("Predict Employee Attrition Risk")
     st.write("Enter employee details below.")
 
     defaults = {
-        "Age": 35, "DailyRate": 800, "DistanceFromHome": 5,
-        "Education": 3, "EnvironmentSatisfaction": 3,
-        "HourlyRate": 65, "JobInvolvement": 3, "JobLevel": 2,
-        "JobSatisfaction": 3, "MonthlyIncome": 5000,
-        "MonthlyRate": 14000, "NumCompaniesWorked": 2,
-        "PercentSalaryHike": 14, "PerformanceRating": 3,
-        "RelationshipSatisfaction": 3, "StockOptionLevel": 1,
-        "TotalWorkingYears": 10, "TrainingTimesLastYear": 3,
-        "WorkLifeBalance": 3, "YearsAtCompany": 5,
-        "YearsInCurrentRole": 3, "YearsSinceLastPromotion": 1,
+        "Age": 35,
+        "DailyRate": 800,
+        "DistanceFromHome": 5,
+        "Education": 3,
+        "EnvironmentSatisfaction": 3,
+        "HourlyRate": 65,
+        "JobInvolvement": 3,
+        "JobLevel": 2,
+        "JobSatisfaction": 3,
+        "MonthlyIncome": 5000,
+        "MonthlyRate": 14000,
+        "NumCompaniesWorked": 2,
+        "PercentSalaryHike": 14,
+        "PerformanceRating": 3,
+        "RelationshipSatisfaction": 3,
+        "StockOptionLevel": 1,
+        "TotalWorkingYears": 10,
+        "TrainingTimesLastYear": 3,
+        "WorkLifeBalance": 3,
+        "YearsAtCompany": 5,
+        "YearsInCurrentRole": 3,
+        "YearsSinceLastPromotion": 1,
         "YearsWithCurrManager": 3
     }
 
     with st.form("employee_form"):
         values = {}
-
         col1, col2 = st.columns(2)
 
         for i, feature in enumerate(features):
             container = col1 if i % 2 == 0 else col2
 
             with container:
-                if feature in encoders and feature != "Attrition":
+                if (
+                    feature in encoders
+                    and feature != "Attrition"
+                ):
                     options = encoders[feature].classes_.tolist()
-                    values[feature] = st.selectbox(feature, options)
+
+                    values[feature] = st.selectbox(
+                        feature,
+                        options
+                    )
                 else:
                     values[feature] = st.number_input(
                         feature,
@@ -161,7 +204,9 @@ with prediction_tab:
                         step=1
                     )
 
-        submitted = st.form_submit_button("Predict Attrition Risk")
+        submitted = st.form_submit_button(
+            "Predict Attrition Risk"
+        )
 
     if submitted:
         try:
@@ -170,15 +215,25 @@ with prediction_tab:
             for feature in features:
                 value = values[feature]
 
-                if feature in encoders and feature != "Attrition":
-                    value = encoders[feature].transform([value])[0]
+                if (
+                    feature in encoders
+                    and feature != "Attrition"
+                ):
+                    value = encoders[feature].transform(
+                        [value]
+                    )[0]
 
                 row[feature] = value
 
-            input_df = pd.DataFrame([row], columns=features)
+            input_df = pd.DataFrame(
+                [row],
+                columns=features
+            )
+
             probability = model.predict_proba(input_df)[0][1]
 
             st.subheader("Prediction Result")
+
             st.metric(
                 "Estimated Attrition Probability",
                 f"{probability * 100:.1f}%"
@@ -197,18 +252,31 @@ with prediction_tab:
         except Exception as e:
             st.error(f"Prediction error: {e}")
 
+
+# =====================================
+# ABOUT PROJECT
+# =====================================
+
 with about_tab:
     st.header("About This Project")
+
     st.write(
-        "An academic Data Science project that uses a Random Forest "
-        "machine learning model to estimate employee attrition risk."
+        "An academic Data Science project that uses a "
+        "Random Forest machine learning model to estimate "
+        "employee attrition risk."
     )
+
     st.markdown("""
-    **Technologies used**
+    **Technologies Used**
     - Python
     - Pandas
     - Scikit-learn
     - Random Forest Classifier
     - Streamlit
-    - IBM HR Analytics sample dataset
+    - IBM HR Analytics Sample Dataset
+
+    **Project Objective**
+
+    To analyze employee data, identify attrition patterns,
+    and estimate employee attrition risk using machine learning.
     """)
