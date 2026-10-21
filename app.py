@@ -71,6 +71,35 @@ with dashboard_tab:
 
         with right:
             st.subheader("Overtime vs Attrition")
+            
+        st.subheader("Department-wise Attrition Analysis")
+
+        department_data = pd.crosstab(
+            df["Department"],
+            df["Attrition"]
+        )
+
+        st.bar_chart(
+            department_data.reindex(
+                columns=["No", "Yes"],
+                fill_value=0
+            )
+        )
+
+        st.subheader("Department Attrition Rate (%)")
+
+        department_rate = (
+            df.assign(
+                Left=df["Attrition"].eq("Yes").astype(int)
+            )
+            .groupby("Department")["Left"]
+            .mean()
+            .mul(100)
+            .round(2)
+        )
+
+        st.bar_chart(department_rate)
+
             overtime = pd.crosstab(
                 df["OverTime"], df["Attrition"]
             )
